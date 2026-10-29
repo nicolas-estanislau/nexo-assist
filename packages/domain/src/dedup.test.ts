@@ -16,6 +16,7 @@ function ticket(overrides: Partial<Ticket>): Ticket {
     status: "Aberto",
     affected: "individual",
     requesterId: "ana",
+    supportLevel: null,
     createdAt: daysAgo(10),
     updatedAt: daysAgo(1),
     resolvedAt: null,
