@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
-    "@libsql/client": "^0.18.0",
     "@nexo/domain": "workspace:*",
     "@nexo/shared": "workspace:*",
+    "@nexo/sqlite": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.14",
     "zod": "^4.6.7"
