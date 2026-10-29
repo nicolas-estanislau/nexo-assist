@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Tokens do protótipo (Pencil). */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+
+  --color-brand: #0b5fc1;
+  --color-brand-hover: #094e9f;
+  --color-brand-soft: #eaf2fd;
+
+  --color-ink: #1d2733;
+  --color-ink-soft: #2a3644;
+  --color-muted: #6b7684;
+  --color-line: #e4e8ee;
+  --color-canvas: #f6f8fa;
+
+  --color-ok: #16a34a;
+  --color-info: #2563eb;
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+}
+
+body {
+  background: white;
+  color: var(--color-ink);
+}
