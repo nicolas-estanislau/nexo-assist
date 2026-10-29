@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Bancos locais (SQLite)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# Material do processo seletivo (não publicar)
+*.pdf
+
+.DS_Store
+Thumbs.db
