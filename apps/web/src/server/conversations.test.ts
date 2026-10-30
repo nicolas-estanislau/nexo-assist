@@ -10,6 +10,7 @@ import {
   findActiveConversation,
   getConversation,
   listMessages,
+  replaceMessageParts,
   startConversation,
 } from "./conversations";
 
@@ -71,6 +72,24 @@ describe("conversas", () => {
     const history = await listMessages(db, c.id);
     expect(history.map((m) => m.role)).toEqual(["funcionario", "agent"]);
     expect((await getConversation(db, c.id)).employeeMessageCount).toBe(1);
+  });
+
+  it("troca as partes de uma mensagem uma vez só (duplo clique em Confirmar)", async () => {
+    const c = await startConversation(db, "ana.souza", NOW);
+    const original = [{ type: "text" as const, text: "pendente" }];
+    const m = await appendMessage(
+      db,
+      c.id,
+      { role: "agent", authorId: null, parts: original },
+      NOW,
+    );
+    const next = [{ type: "text" as const, text: "confirmado" }];
+    const results = await Promise.all([
+      replaceMessageParts(db, m.id, original, next),
+      replaceMessageParts(db, m.id, original, next),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect((await listMessages(db, c.id))[0]?.parts).toEqual(next);
   });
 });
 

@@ -47,6 +47,10 @@ Na primeira subida o banco SQLite é criado em `apps/tickets-api/data/` com func
 - **Sessão:** JWT assinado (HS256) num cookie `httpOnly`. "Manter conectado" vale por 30 dias; sem ele, o cookie some ao fechar o navegador.
 - **Autorização em duas camadas:** o `proxy.ts` faz a checagem otimista (sem sessão vai para o login, funcionário não entra no console e vice-versa), e cada página e ação refaz a checagem em `server/auth.ts`, perto dos dados.
 - **Estado da conversa:** a máquina de estados fica no domínio (`agente → aguardando_analista → com_analista → agente | encerrada`). O banco só grava transições que ela aceita, e a gravação é condicionada ao estado lido, então dois analistas assumindo ao mesmo tempo não dão conflito silencioso.
+- **Chat em tempo real:** a mensagem vai para `POST /api/chat/messages`, que responde em NDJSON. Cada passo do agent ("consultou seus chamados", "verificou duplicidade") chega ao navegador assim que acontece e vira um chip acima da resposta. Clicar em "por quê?" abre o painel com o que foi entendido, o que foi feito, as regras aplicadas, a confiança e a justificativa.
+- **Rascunho confirmado no servidor:** Confirmar, Editar e Cancelar mandam só o id do rascunho; os dados vêm do banco, não do navegador. A edição muda texto e categoria, mas a prioridade e o prazo continuam os das regras. Um compare-and-swap na mensagem garante que um duplo clique não cria dois chamados.
+- **Com um analista, o agent se cala:** as mensagens do funcionário só ficam registradas, e a tela consulta o servidor a cada 3 s para mostrar as respostas do analista.
+- **Limite de 30 mensagens por conversa** (`MAX_MESSAGES_PER_SESSION`), checado no servidor. Ao chegar no limite, "Nova conversa" encerra a atual; os chamados continuam.
 - **Cache Components desligado:** quase toda tela depende do usuário logado (chat, chamados, console), então o cache de páginas estáticas do Next 16 traria complexidade sem ganho.
 
 ### Usuários de exemplo

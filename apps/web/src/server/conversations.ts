@@ -108,6 +108,24 @@ export async function appendMessage(
   return message;
 }
 
+/**
+ * Troca as partes de uma mensagem só se ainda estiverem como lidas (compare-and-swap).
+ * É o que impede um duplo clique em "Confirmar" de criar dois chamados.
+ */
+export async function replaceMessageParts(
+  db: AppDb,
+  messageId: string,
+  expected: MessagePart[],
+  next: MessagePart[],
+): Promise<boolean> {
+  const updated = await db
+    .update(messages)
+    .set({ parts: next })
+    .where(and(eq(messages.id, messageId), eq(messages.parts, expected)))
+    .returning({ id: messages.id });
+  return updated.length > 0;
+}
+
 export interface TransitionInput {
   event: ConversationEvent;
   actorId: string;

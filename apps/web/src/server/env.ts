@@ -6,6 +6,7 @@ const EnvSchema = z.object({
   TICKETS_API_TOKEN: z.string().min(16),
   APP_DATABASE_URL: z.string().default("file:./data/app.db"),
   MAX_MESSAGES_PER_SESSION: z.coerce.number().int().positive().default(30),
+  LLM_MODEL: z.string().min(1).default("google/gemini-3.5-flash"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

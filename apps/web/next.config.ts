@@ -10,8 +10,15 @@ try {
 
 const nextConfig: NextConfig = {
   // Pacotes do monorepo são publicados como TypeScript; o Next compila junto com o app.
-  transpilePackages: ["@nexo/shared", "@nexo/domain", "@nexo/tickets-client", "@nexo/sqlite"],
-  serverExternalPackages: ["@libsql/client", "libsql"],
+  transpilePackages: [
+    "@nexo/shared",
+    "@nexo/domain",
+    "@nexo/tickets-client",
+    "@nexo/sqlite",
+    "@nexo/agent",
+  ],
+  // Carregados direto do node_modules no servidor, sem passar pelo bundler.
+  serverExternalPackages: ["@libsql/client", "libsql", "@mastra/core"],
   // O canto inferior esquerdo é do botão "Sair" da barra lateral.
   devIndicators: { position: "bottom-right" },
   turbopack: {

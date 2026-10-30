@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
+    "@mastra/core": "^1.80.0",
+    "@nexo/agent": "workspace:*",
     "@nexo/domain": "workspace:*",
     "@nexo/shared": "workspace:*",
     "@nexo/sqlite": "workspace:*",
