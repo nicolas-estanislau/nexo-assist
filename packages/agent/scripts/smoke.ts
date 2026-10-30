@@ -53,6 +53,9 @@ for (const message of messages) {
     `  [${trace.understood.intent} | confiança ${trace.confidence} | ${trace.latencyMs} ms | ${trace.actions.map((a) => a.tool).join(", ")}]`,
   );
   if (trace.rulesApplied.length > 0) console.log(`  regras: ${trace.rulesApplied.join(" / ")}`);
+  for (const part of result.parts) {
+    if (part.type === "draft_card") console.log(`  descrição: ${part.draft.description}`);
+  }
   if (result.transfer) console.log(`  TRANSFERIDO: ${result.transfer.reason}`);
   history.push({ role: "funcionario", parts: [{ type: "text", text: message }] });
   history.push({ role: "agent", parts: result.parts });
