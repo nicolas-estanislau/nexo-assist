@@ -1,0 +1,24 @@
+{
+  "name": "@nexo/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@mastra/core": "^1.80.0",
+    "@nexo/domain": "workspace:*",
+    "@nexo/shared": "workspace:*",
+    "@nexo/tickets-client": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@nexo/tickets-api": "workspace:*",
+    "tsx": "^4.23.15"
+  }
+}
