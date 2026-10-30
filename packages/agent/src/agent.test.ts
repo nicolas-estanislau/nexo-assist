@@ -77,7 +77,12 @@ function fixed(value: TurnDecision) {
   const interpreter: Interpreter = {
     async interpret(prompt) {
       prompts.push(prompt);
-      return { decision: value, model: "teste", usage: { inputTokens: 1, outputTokens: 1 } };
+      return {
+        decision: value,
+        model: "teste",
+        usage: { inputTokens: 1, outputTokens: 1 },
+        attempts: 1,
+      };
     },
   };
   return { interpreter, prompts };
@@ -122,9 +127,10 @@ describe("runTurn", () => {
     expect(prompt).toContain("INC-20311");
     expect(prompt).not.toContain("INC-20402"); // do Bruno
     expect(prompt).not.toContain("INC-19410"); // resolvido há mais de 7 dias
-    // As duas consultas rodam em paralelo; a ordem no trace varia.
+    // As consultas rodam em paralelo; a ordem no trace varia.
     expect(trace.actions.map((a) => a.tool).sort()).toEqual([
       "buscar_central_de_ajuda",
+      "interpretar",
       "listar_chamados",
     ]);
   });

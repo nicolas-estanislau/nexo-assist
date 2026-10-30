@@ -1,6 +1,5 @@
-import type { MessagePart, MessageRole } from "@nexo/shared";
+import { daysSince, formatNow, type MessagePart, type MessageRole } from "@nexo/shared";
 import type { TurnContext } from "./context";
-import { daysSince, formatNow } from "./format";
 
 // Instruções fixas do agent. As regras que o código já garante (prioridade, prazo, duplicidade,
 // transferência, privacidade) aparecem aqui só como orientação: se o modelo errar, o código corrige.

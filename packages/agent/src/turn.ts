@@ -114,6 +114,13 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
   }
 
   const { decision } = interpretation;
+  trace.record({
+    tool: "interpretar",
+    label: "interpretou a mensagem",
+    status: "ok",
+    detail: interpretation.attempts > 1 ? "o modelo demorou e foi chamado de novo" : null,
+    attempts: interpretation.attempts,
+  });
   const article = context.kb.find((r) => r.article.id === decision.articleId)?.article;
   if (article) trace.rule(`Central de ajuda: ${article.id} "${article.title}".`);
 

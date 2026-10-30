@@ -9,6 +9,8 @@ export interface Interpretation {
   decision: TurnDecision;
   model: string | null;
   usage: { inputTokens: number; outputTokens: number } | null;
+  /** Chamadas feitas ao modelo até ter uma resposta. */
+  attempts: number;
 }
 
 export interface Interpreter {
@@ -20,7 +22,21 @@ export interface GeminiOptions {
   model: string;
   /** Raciocínio do Gemini. "minimal" mantém a resposta em ~2 s. */
   thinkingLevel?: "minimal" | "low" | "medium" | "high";
-  timeoutMs?: number;
+  /**
+   * Limite de cada tentativa. A resposta normal leva ~2 s, mas de vez em quando o modelo
+   * passa de 30 s; cortar cedo e tentar de novo sai bem mais rápido do que esperar.
+   */
+  attemptTimeoutMs?: number;
+  attempts?: number;
+}
+
+type Usage = { inputTokens?: number; outputTokens?: number } | undefined;
+
+function usageOf(result: { usage?: Usage; totalUsage?: Usage }): Interpretation["usage"] {
+  const usage = result.totalUsage ?? result.usage;
+  const inputTokens = usage?.inputTokens ?? 0;
+  const outputTokens = usage?.outputTokens ?? 0;
+  return inputTokens + outputTokens > 0 ? { inputTokens, outputTokens } : null;
 }
 
 export function createMastraInterpreter(options: GeminiOptions): Interpreter {
@@ -30,25 +46,32 @@ export function createMastraInterpreter(options: GeminiOptions): Interpreter {
     instructions: INSTRUCTIONS,
     model: options.model,
   });
+  const maxAttempts = options.attempts ?? 2;
 
   return {
     async interpret(prompt) {
-      const result = await agent.generate(prompt, {
-        structuredOutput: { schema: TurnDecision },
-        modelSettings: { temperature: 0.2 },
-        providerOptions: {
-          google: { thinkingConfig: { thinkingLevel: options.thinkingLevel ?? "minimal" } },
-        },
-        abortSignal: AbortSignal.timeout(options.timeoutMs ?? 20_000),
-      });
-      const usage = result.usage as { inputTokens?: number; outputTokens?: number } | undefined;
-      return {
-        decision: result.object,
-        model: options.model,
-        usage: usage
-          ? { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 }
-          : null,
-      };
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const result = await agent.generate(prompt, {
+            structuredOutput: { schema: TurnDecision },
+            modelSettings: { temperature: 0.2 },
+            providerOptions: {
+              google: { thinkingConfig: { thinkingLevel: options.thinkingLevel ?? "minimal" } },
+            },
+            abortSignal: AbortSignal.timeout(options.attemptTimeoutMs ?? 9_000),
+          });
+          return {
+            decision: result.object,
+            model: options.model,
+            usage: usageOf(result as { usage?: Usage; totalUsage?: Usage }),
+            attempts: attempt,
+          };
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError;
     },
   };
 }

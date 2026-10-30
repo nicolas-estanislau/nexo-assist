@@ -7,7 +7,10 @@ import {
   SLA_POLICIES,
 } from "@nexo/domain";
 import {
+  daysSince,
+  formatDue,
   OPEN_STATUSES,
+  plural,
   type MessagePart,
   type SupportLevel,
   type Ticket,
@@ -17,7 +20,6 @@ import {
 } from "@nexo/shared";
 import type { TurnContext } from "./context";
 import type { TurnDecision } from "./decision";
-import { daysSince, formatDue, plural } from "./format";
 import type { TraceRecorder } from "./trace";
 
 // Aplica as regras do service desk sobre a sugestão do LLM. O LLM interpreta a conversa; este
