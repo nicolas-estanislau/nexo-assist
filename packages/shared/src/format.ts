@@ -42,3 +42,27 @@ export function daysSince(iso: string, now: Date): number {
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/** "16 out" */
+export function formatShortDate(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("pt-BR", { timeZone: TZ, day: "2-digit", month: "short" })
+    .replace(/\s*de\s*/, " ")
+    .replace(".", "");
+}
+
+/** "16 out, 14:20" */
+export function formatShortDateTime(iso: string): string {
+  const time = new Date(iso).toLocaleTimeString("pt-BR", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${formatShortDate(iso)}, ${time}`;
+}
+
+/** "hoje", "há 1 dia", "há 5 dias" */
+export function formatAgo(iso: string, now: Date): string {
+  const days = daysSince(iso, now);
+  return days === 0 ? "hoje" : `há ${plural(days, "dia", "dias")}`;
+}

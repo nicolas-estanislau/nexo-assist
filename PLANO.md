@@ -84,3 +84,26 @@ Vira os chips "✓ consultou seus chamados" acima da resposta, com painel de det
 4. **Console, conversa transferida:** lista com filtros, conversa com agente pausado, Devolver ao agent / Assumir atendimento, painel de chamados.
 5. **Console, analista atendendo:** mensagens do analista (Suporte N2), Devolver ao agent / Encerrar atendimento.
 6. **Meu perfil:** nome, e-mail gerenciado pela TI, redefinir senha.
+
+### Detalhes das telas (revistos no Pencil em 30/10)
+
+**Chat (telas 2 e 3)**
+
+- Coluna de mensagens centrada (~660 px). Sem avatar: o agent tem uma linha "Nexo Assist ✓ consultou seus chamados ✓ buscou na central de ajuda" (texto miúdo, sem caixa) acima do balão.
+- Balão do agent: branco com borda, cantos ~8 px. Pergunta e opções rápidas ficam dentro do balão: pergunta em negrito, opções como botões pequenos com borda (a escolhida fica em azul claro).
+- Balão do funcionário: escuro (ink), texto branco, alinhado à direita.
+- Rascunho: cabeçalho "Novo chamado · Rascunho D-381" e "● Aguardando confirmação" (laranja); título grande; descrição; três colunas (Categoria, Prioridade "● Alta · resposta até 13:43", Afetados "Somente você"); rodapé cinza com Confirmar (azul, dica ⌘↵), Editar (com borda) e Cancelar (texto).
+- Seleção de chamado: lista com rádio, id miúdo, título, status com ponto colorido e data ("16 out"). Ao escolher, a mensagem do funcionário vira "INC-20311 · Notebook lento após atualização".
+- Card do chamado: "Chamado · INC-20311" e status com ponto à direita; título; descrição; quatro colunas (Categoria "Hardware › Notebook", Prioridade, Aberto em "16 out, 14:20", Última atualização "há 5 dias · prazo vencido" em laranja).
+- Texto do vencido e as opções no mesmo balão, abaixo do card.
+- Campo "Escreva para o Nexo…" com botão "↑ Enviar"; abaixo, à direita, "16/30 mensagens nesta sessão".
+
+**Console (telas 4 e 5)**
+
+- Três colunas: lista de conversas (busca "Pesquisar conversa ou chamado"; filtros Todas / Para você 3 / Com o agent 9 / Minhas 1; "● Disponível" no topo), conversa ao centro e painel "Chamados da Ana" à direita (3 abertos · 2 encerrados).
+- Item da lista: avatar com ponto online, nome, hora, última mensagem (com ✓✓ quando é do Nexo), contador de não lidas e uma linha de status colorida: "● Transferida · INC-20311" (vermelho), "● Transferida · contato em 25 min", "● Agent pediu ajuda · confiança 41%" (laranja), "● Agent atendendo" (verde), "● Resolvida pelo agent" (cinza), "● Você está atendendo" (azul).
+- Cabeçalho da conversa: avatar, nome, "online · Financeiro · INC-20311"; pílula "Aguardando atendente".
+- Na visão do analista, o funcionário fica à esquerda (balão branco) e o agent à direita (balão azul claro, "Nexo Assist IA"). Mensagens do analista: verde claro, "Rafael Lima" + selo "Suporte N2". Eventos centralizados com linha: "⇄ Transferida para Suporte N2 · 10:05", "🎧 Rafael Lima assumiu · agent pausado · 10:12".
+- Aguardando (tela 4): barra inferior "✋ Ana espera um atendente · Agent pausado · até 12:05", botões "Devolver ao agent" e "Assumir atendimento" (azul); campo desabilitado "Assuma o atendimento para responder".
+- Assumido (tela 5): no cabeçalho "Devolver ao agent" e "Encerrar atendimento" (vermelho claro); campo livre com botão de enviar redondo.
+- Painel direito: "Desta conversa" (card do chamado em foco com status, título, categoria · prioridade e "⇄ Transferido para um analista 10:05" / "🎧 Assumido por Rafael Lima"); "Outros chamados" (lista com ponto de status, título, id · status ou "Resolvido em 02 set"); botão "Ver todos os chamados da Ana ↗".

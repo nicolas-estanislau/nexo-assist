@@ -41,18 +41,15 @@ function uniqueActions(actions: readonly Action[]): Action[] {
 function ActionChip({ action }: { action: Action }) {
   const failed = action.status === "erro";
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${
-        failed ? "bg-danger/10 text-danger" : "bg-canvas text-ink-soft ring-1 ring-line"
-      }`}
-    >
-      {failed ? <AlertTriangle className="size-3" /> : <Check className="size-3 text-ok" />}
+    <span className={`inline-flex items-center gap-1 ${failed ? "text-danger" : ""}`}>
+      {failed ? <AlertTriangle className="size-3" /> : <Check className="size-3" />}
       {action.label}
-      {action.attempts > 1 && <span className="text-warn">· {action.attempts} tentativas</span>}
+      {action.attempts > 1 && <span className="text-warn">({action.attempts} tentativas)</span>}
     </span>
   );
 }
 
+/** Linha "Nexo Assist ✓ consultou seus chamados ✓ buscou na central de ajuda", como no protótipo. */
 export function DecisionChips({
   trace,
   live,
@@ -64,14 +61,14 @@ export function DecisionChips({
   onOpen?: () => void;
 }) {
   const actions = uniqueActions(trace?.actions ?? live?.actions ?? []);
-  if (!trace && !live) return null;
   return (
-    <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+    <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted">
+      <span className="font-semibold text-ink">Nexo Assist</span>
       {actions.map((action) => (
         <ActionChip key={`${action.tool}-${action.label}`} action={action} />
       ))}
       {live?.thinking && !trace && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+        <span className="inline-flex items-center gap-1">
           <Loader2 className="size-3 animate-spin" /> analisando sua mensagem…
         </span>
       )}
@@ -79,15 +76,15 @@ export function DecisionChips({
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] text-muted hover:bg-canvas hover:text-ink"
+          className="inline-flex items-center gap-0.5 rounded px-1 hover:bg-canvas hover:text-ink"
         >
           <span className={`font-medium ${confidenceTone(trace.confidence)}`}>
             confiança {percent(trace.confidence)}
           </span>
-          · por quê? <ChevronRight className="size-3" />
+          <span className="mx-0.5">·</span>por quê? <ChevronRight className="size-3" />
         </button>
       )}
-    </div>
+    </p>
   );
 }
 
