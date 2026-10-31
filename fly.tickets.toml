@@ -1,0 +1,23 @@
+# Serviço de chamados ("legado" simulado). Sem http_service: não tem endereço público e só
+# é alcançado pelo app web, na rede privada do Fly (<app>.internal).
+app = "nexo-assist-tickets"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+  build-target = "tickets"
+
+[env]
+  TICKETS_API_PORT = "4000"
+  TICKETS_DATABASE_URL = "file:/data/tickets.db"
+  TICKETS_FAILURE_RATE = "0.05"
+  TICKETS_OUTAGE_SECONDS = "3"
+  TICKETS_LATENCY_MS = "150"
+
+[mounts]
+  source = "tickets_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

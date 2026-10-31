@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/.next
+**/data
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.pdf
