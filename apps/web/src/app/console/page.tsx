@@ -1,34 +1,36 @@
-import { LogOut } from "lucide-react";
-import { logout } from "@/app/login/actions";
-import { Avatar } from "@/components/avatar";
-import { Logo } from "@/components/logo";
+import { matchesFilter, type ConsoleDetail, type Person } from "@/lib/console";
 import { requireUser } from "@/server/auth";
+import { loadConsoleConversation, loadInbox } from "@/server/console";
+import { Console } from "./console";
 
-// O console do analista (telas 4 e 5) entra na etapa 6.
+// Console do analista (telas 4 e 5). A conversa aberta fica na URL (?c=id); sem ela, abre a
+// primeira da fila do analista, ou a primeira da lista.
 
-export default async function ConsolePage() {
+export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
   const user = await requireUser("analista");
+  const me: Person = {
+    id: user.id,
+    name: user.name,
+    department: user.department,
+    supportLevel: user.supportLevel,
+  };
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas p-6">
-      <Logo />
-      <div className="flex items-center gap-3 rounded-xl border border-line bg-white px-5 py-4 shadow-sm">
-        <Avatar name={user.name} />
-        <div>
-          <p className="text-sm font-semibold">{user.name}</p>
-          <p className="text-[12px] text-muted">
-            Suporte {user.supportLevel} · console em construção
-          </p>
-        </div>
-        <form action={logout} className="ml-4">
-          <button
-            type="submit"
-            className="flex items-center gap-1.5 text-[13px] text-ink-soft hover:text-ink"
-          >
-            <LogOut className="size-4" /> Sair
-          </button>
-        </form>
-      </div>
-    </main>
-  );
+  const items = await loadInbox();
+  const { c } = await searchParams;
+  const wanted = typeof c === "string" ? c : null;
+  const first =
+    items.find((i) => i.id === wanted) ??
+    items.find((i) => matchesFilter(i, "para_voce", me)) ??
+    items[0];
+
+  let detail: ConsoleDetail | null = null;
+  if (first) {
+    try {
+      detail = await loadConsoleConversation(user, first.id);
+    } catch {
+      detail = null;
+    }
+  }
+
+  return <Console me={me} initialItems={items} initialDetail={detail} />;
 }

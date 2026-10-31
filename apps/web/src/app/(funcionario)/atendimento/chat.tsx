@@ -2,18 +2,26 @@
 
 import { ArrowUp, Headset, Loader2, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatShortDate, type DecisionTrace, type MessagePart } from "@nexo/shared";
+import type { DecisionTrace } from "@nexo/shared";
 import { DecisionChips, DecisionPanel } from "@/components/decision";
+import {
+  Bubble,
+  groupParts,
+  QuickReplyOptions,
+  SystemEvent,
+  TicketSelect,
+  textOf,
+  type QuickReplies,
+} from "@/components/message-parts";
 import { PageHeader } from "@/components/page-header";
-import { StatusDot, TicketCard } from "@/components/tickets";
+import { TicketCard } from "@/components/tickets";
 import type { ChatEvent, ChatMessage, ChatState } from "@/lib/chat";
-import { DraftCard, type DraftEdit } from "./draft-card";
+import { DraftCard, type DraftEdit } from "@/components/draft-card";
 
 // Telas 2 e 3 do protótipo. O turno chega em NDJSON: os passos do agent aparecem enquanto ele
 // trabalha e a resposta entra quando fica pronta. Com um analista, a tela consulta o servidor.
 
 type Action = DecisionTrace["actions"][number];
-type QuickReplies = Extract<MessagePart, { type: "quick_replies" }>;
 interface Pending {
   actions: Action[];
   thinking: boolean;
@@ -48,31 +56,6 @@ async function jsonOrError(response: Response): Promise<ChatState> {
   return data;
 }
 
-const textOf = (message: ChatMessage | undefined) =>
-  message?.role === "funcionario" && message.parts[0]?.type === "text" ? message.parts[0].text : "";
-
-/** Texto e opções rápidas logo depois ficam no mesmo balão, como no protótipo. */
-function groupParts(parts: MessagePart[]) {
-  const blocks: { part: MessagePart; replies: QuickReplies | null }[] = [];
-  parts.forEach((part, i) => {
-    if (part.type === "quick_replies" && parts[i - 1]?.type === "text") return;
-    const next = parts[i + 1];
-    blocks.push({
-      part,
-      replies: part.type === "text" && next?.type === "quick_replies" ? next : null,
-    });
-  });
-  return blocks;
-}
-
-function Bubble({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="max-w-[78%] rounded-lg border border-line bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink">
-      {children}
-    </div>
-  );
-}
-
 export function Chat({ initial, firstName }: { initial: ChatState; firstName: string }) {
   const [chat, setChat] = useState(initial);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -88,6 +71,7 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
   const atLimit = count >= chat.limit;
   const busy = pending !== null || optimistic !== null;
   const withHuman = status === "aguardando_analista" || status === "com_analista";
+  const closed = status === "encerrada";
   const lastId = chat.messages.at(-1)?.id;
   const traced = chat.messages.find((m) => m.id === openTrace)?.trace ?? null;
 
@@ -192,31 +176,7 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
   }
 
   function renderReplies(replies: QuickReplies, live: boolean, answer: string) {
-    return (
-      <>
-        {replies.question && <p className="mt-2 font-semibold">{replies.question}</p>}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {replies.options.map((option) => {
-            const chosen = !live && answer.startsWith(option.value);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                disabled={!live}
-                onClick={() => send(option.value)}
-                className={`rounded-md border px-2.5 py-1 text-[12.5px] transition ${
-                  chosen
-                    ? "border-brand/40 bg-brand-soft text-brand"
-                    : "border-line bg-white text-ink enabled:hover:border-brand/40 enabled:hover:bg-brand-soft disabled:text-muted"
-                }`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      </>
-    );
+    return <QuickReplyOptions replies={replies} live={live} answer={answer} onPick={send} />;
   }
 
   function renderBlock(
@@ -229,7 +189,7 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
     switch (part.type) {
       case "text":
         return (
-          <Bubble key={key}>
+          <Bubble key={key} tone={message.role === "analista" ? "analyst" : "white"}>
             <p className="whitespace-pre-line">{part.text}</p>
             {replies && renderReplies(replies, live, answer)}
           </Bubble>
@@ -237,47 +197,7 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
       case "quick_replies":
         return <Bubble key={key}>{renderReplies(part, live, answer)}</Bubble>;
       case "ticket_select":
-        return (
-          <div
-            key={key}
-            role="radiogroup"
-            className="w-full divide-y divide-line overflow-hidden rounded-lg border border-line bg-white"
-          >
-            {part.tickets.map(({ ticket, sla }) => {
-              const chosen = answer.includes(ticket.id);
-              return (
-                <button
-                  key={ticket.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={chosen}
-                  disabled={!live}
-                  onClick={() => send(`${ticket.id} · ${ticket.title}`)}
-                  className={`flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[13px] enabled:hover:bg-canvas ${
-                    chosen ? "bg-canvas" : ""
-                  }`}
-                >
-                  <span
-                    className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border ${
-                      chosen ? "border-brand" : "border-slate-300"
-                    }`}
-                  >
-                    {chosen && <span className="size-2 rounded-full bg-brand" />}
-                  </span>
-                  <span className="w-16 shrink-0 text-[11px] text-muted">{ticket.id}</span>
-                  <span className="min-w-0 flex-1 truncate font-medium">{ticket.title}</span>
-                  {sla.overdue && (
-                    <span className="text-[11px] font-medium text-danger">vencido</span>
-                  )}
-                  <StatusDot status={ticket.status} className="text-[11px]" />
-                  <span className="w-11 shrink-0 text-right text-[11px] text-muted">
-                    {formatShortDate(ticket.createdAt)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        );
+        return <TicketSelect key={key} part={part} live={live} answer={answer} onPick={send} />;
       case "ticket_card":
         return <TicketCard key={key} view={part.view} />;
       case "draft_card":
@@ -294,14 +214,7 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
           />
         );
       case "system_event":
-        return (
-          <p
-            key={key}
-            className="flex w-full items-center gap-3 text-[11px] text-muted before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line"
-          >
-            {part.text}
-          </p>
-        );
+        return <SystemEvent key={key}>{part.text}</SystemEvent>;
     }
   }
 
@@ -344,20 +257,23 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
     );
   }
 
-  const statusPill =
-    status === "com_analista" ? (
-      <span className="flex items-center gap-1.5 rounded-full bg-info/10 px-2.5 py-1 text-[12px] font-medium text-info">
-        <Headset className="size-3.5" /> Com {chat.conversation?.analyst?.name ?? "um analista"}
-      </span>
-    ) : status === "aguardando_analista" ? (
-      <span className="flex items-center gap-1.5 rounded-full bg-warn/10 px-2.5 py-1 text-[12px] font-medium text-warn">
-        <span className="size-1.5 animate-pulse rounded-full bg-warn" /> Aguardando analista
-      </span>
-    ) : (
-      <span className="flex items-center gap-1.5 rounded-full bg-ok/10 px-2.5 py-1 text-[12px] font-medium text-ok">
-        <span className="size-1.5 rounded-full bg-ok" /> Assistente online
-      </span>
-    );
+  const statusPill = closed ? (
+    <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[12px] font-medium text-muted">
+      <span className="size-1.5 rounded-full bg-slate-400" /> Atendimento encerrado
+    </span>
+  ) : status === "com_analista" ? (
+    <span className="flex items-center gap-1.5 rounded-full bg-info/10 px-2.5 py-1 text-[12px] font-medium text-info">
+      <Headset className="size-3.5" /> Com {chat.conversation?.analyst?.name ?? "um analista"}
+    </span>
+  ) : status === "aguardando_analista" ? (
+    <span className="flex items-center gap-1.5 rounded-full bg-warn/10 px-2.5 py-1 text-[12px] font-medium text-warn">
+      <span className="size-1.5 animate-pulse rounded-full bg-warn" /> Aguardando analista
+    </span>
+  ) : (
+    <span className="flex items-center gap-1.5 rounded-full bg-ok/10 px-2.5 py-1 text-[12px] font-medium text-ok">
+      <span className="size-1.5 rounded-full bg-ok" /> Assistente online
+    </span>
+  );
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -448,11 +364,13 @@ export function Chat({ initial, firstName }: { initial: ChatState; firstName: st
                 {error}
               </p>
             )}
-            {atLimit ? (
+            {closed || atLimit ? (
               <div className="flex items-center justify-between gap-4 rounded-lg border border-line bg-canvas px-4 py-3 text-[13px]">
                 <p className="text-ink-soft">
-                  Esta conversa chegou ao limite de {chat.limit} mensagens. Seus chamados continuam
-                  salvos.
+                  {closed
+                    ? `${chat.conversation?.analyst?.name ?? "O analista"} encerrou o atendimento.`
+                    : `Esta conversa chegou ao limite de ${chat.limit} mensagens.`}{" "}
+                  Seus chamados continuam salvos.
                 </p>
                 <button
                   type="button"
