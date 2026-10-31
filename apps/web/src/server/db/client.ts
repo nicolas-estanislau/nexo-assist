@@ -48,6 +48,15 @@ const MIGRATIONS: Migrations = [
     `ALTER TABLE conversations ADD COLUMN handoff_at TEXT`,
     `ALTER TABLE conversations ADD COLUMN closed_by TEXT`,
   ],
+  [
+    // Contador de não lidas no console: até quando cada analista viu cada conversa.
+    `CREATE TABLE conversation_reads (
+      conversation_id TEXT NOT NULL REFERENCES conversations(id),
+      analyst_id TEXT NOT NULL,
+      read_at TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, analyst_id)
+    )`,
+  ],
 ];
 
 export function openAppDb(url: string) {

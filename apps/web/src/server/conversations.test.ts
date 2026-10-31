@@ -15,8 +15,10 @@ import {
   lastMessage,
   listConsoleConversations,
   listMessages,
+  markRead,
   replaceMessageParts,
   startConversation,
+  unreadCounts,
 } from "./conversations";
 
 const NOW = new Date("2026-10-29T10:00:00-03:00");
@@ -275,5 +277,32 @@ describe("limite de uso", () => {
     expect(await countAgentTurns(db, NOW)).toBe(3);
     expect(await countAgentTurns(db, NOW, "ana.souza")).toBe(2);
     expect(await countAgentTurns(db, later(2), "ana.souza")).toBe(1);
+  });
+});
+
+describe("não lidas", () => {
+  const say = (conversationId: string, at: Date) =>
+    appendMessage(
+      db,
+      conversationId,
+      { role: "funcionario", authorId: "ana.souza", parts: [{ type: "text", text: "oi" }] },
+      at,
+    );
+
+  it("conta as mensagens do funcionário depois da última leitura de cada analista", async () => {
+    const c = await startConversation(db, "ana.souza", NOW); // a saudação do agent não conta
+    await say(c.id, later(1));
+    await say(c.id, later(2));
+    expect((await unreadCounts(db, "rafael.lima", [c.id])).get(c.id)).toBe(2);
+
+    await markRead(db, c.id, "rafael.lima", later(3));
+    await say(c.id, later(4));
+    await markRead(db, c.id, "rafael.lima", later(3)); // reabrir atualiza, não duplica
+    expect((await unreadCounts(db, "rafael.lima", [c.id])).get(c.id)).toBe(1);
+    expect((await unreadCounts(db, "juliana.costa", [c.id])).get(c.id)).toBe(3);
+
+    await markRead(db, c.id, "rafael.lima", later(5));
+    expect((await unreadCounts(db, "rafael.lima", [c.id])).has(c.id)).toBe(false);
+    expect(await unreadCounts(db, "rafael.lima", [])).toEqual(new Map());
   });
 });

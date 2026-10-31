@@ -27,6 +27,8 @@ export interface InboxItem {
     at: string | null;
   } | null;
   lastMessage: { role: MessageRole; text: string } | null;
+  /** Mensagens do funcionário que este analista ainda não viu (só quando é com ele). */
+  unread: number;
   updatedAt: string;
 }
 

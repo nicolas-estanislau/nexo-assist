@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowUp, ArrowLeftRight, Hand, Headset, Loader2, LogOut, Search } from "lucide-react";
+import {
+  ArrowUp,
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+  Hand,
+  Headset,
+  Loader2,
+  LogOut,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDue, formatShortDate, OPEN_STATUSES, type TicketView } from "@nexo/shared";
 import { logout } from "@/app/login/actions";
@@ -228,7 +238,7 @@ export function Console({
       {traced ? (
         <DecisionPanel trace={traced} onClose={() => setOpenTrace(null)} />
       ) : (
-        detail && <TicketsPanel detail={detail} />
+        detail && <TicketsPanel key={detail.item.id} detail={detail} />
       )}
     </div>
   );
@@ -300,6 +310,8 @@ function Inbox({
         {items.map((item) => {
           const status = inboxStatus(item, me.id);
           const tone = TONE[status.tone];
+          // A conversa aberta já está sendo lida, mesmo antes da próxima consulta.
+          const unread = item.id === selectedId ? 0 : item.unread;
           const who =
             item.lastMessage?.role === "agent"
               ? "Nexo: "
@@ -324,9 +336,21 @@ function Inbox({
                     <span className="truncate text-[13px] font-semibold">{item.employee.name}</span>
                     <span className="shrink-0 text-[11px] text-muted">{time(item.updatedAt)}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-[12px] text-muted">
-                    {who}
-                    {item.lastMessage?.text}
+                  <span className="mt-0.5 flex items-center gap-2">
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[12px] ${unread > 0 ? "font-medium text-ink" : "text-muted"}`}
+                    >
+                      {who}
+                      {item.lastMessage?.text}
+                    </span>
+                    {unread > 0 && (
+                      <span
+                        aria-label={`${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`}
+                        className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-semibold text-white"
+                      >
+                        {unread > 9 ? "9+" : unread}
+                      </span>
+                    )}
                   </span>
                   <span
                     className={`mt-1 flex items-center gap-1.5 text-[11px] font-medium ${tone.text}`}
@@ -736,11 +760,21 @@ function focusedTicket(detail: ConsoleDetail): TicketView | null {
   return (id && detail.tickets?.find((v) => v.ticket.id === id)) || null;
 }
 
+/** Encerrados mostrados antes de "Ver todos". Os abertos aparecem sempre. */
+const RECENT_CLOSED = 2;
+
 function TicketsPanel({ detail }: { detail: ConsoleDetail }) {
   const { item, tickets } = detail;
   const name = firstName(item.employee.name);
   const focused = focusedTicket(detail);
+  const [showAll, setShowAll] = useState(false);
   const others = (tickets ?? []).filter((v) => v.ticket.id !== focused?.ticket.id);
+  // A lista já vem com os abertos primeiro e os mais recentes antes.
+  const othersOpen = others.filter((v) => OPEN_STATUSES.includes(v.ticket.status));
+  const othersClosed = others.filter((v) => !OPEN_STATUSES.includes(v.ticket.status));
+  const hidden = othersClosed.length - RECENT_CLOSED;
+  const visible =
+    showAll || hidden <= 0 ? others : [...othersOpen, ...othersClosed.slice(0, RECENT_CLOSED)];
   const open = (tickets ?? []).filter((v) => OPEN_STATUSES.includes(v.ticket.status)).length;
   const closed = (tickets ?? []).length - open;
 
@@ -800,7 +834,7 @@ function TicketsPanel({ detail }: { detail: ConsoleDetail }) {
               {focused ? "Outros chamados" : "Chamados"}
             </h3>
             <ul className="divide-y divide-line rounded-lg border border-line">
-              {others.map(({ ticket, sla }) => {
+              {visible.map(({ ticket, sla }) => {
                 const isOpen = OPEN_STATUSES.includes(ticket.status);
                 return (
                   <li key={ticket.id} className="px-3.5 py-2.5">
@@ -818,6 +852,25 @@ function TicketsPanel({ detail }: { detail: ConsoleDetail }) {
                 );
               })}
             </ul>
+            {hidden > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                aria-expanded={showAll}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line py-2 text-[12px] font-medium text-ink-soft hover:bg-canvas hover:text-ink"
+              >
+                {showAll ? (
+                  <>
+                    Mostrar menos <ChevronUp className="size-3.5" />
+                  </>
+                ) : (
+                  <>
+                    Ver todos os chamados de {name} ({(tickets ?? []).length}){" "}
+                    <ChevronDown className="size-3.5" />
+                  </>
+                )}
+              </button>
+            )}
           </section>
         )}
 

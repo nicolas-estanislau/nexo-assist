@@ -22,6 +22,7 @@ function item(patch: Partial<InboxItem>): InboxItem {
     analyst: null,
     handoff: null,
     lastMessage: null,
+    unread: 0,
     updatedAt: "2026-10-30T10:00:00.000Z",
     ...patch,
   };

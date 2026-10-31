@@ -6,7 +6,7 @@ export async function GET() {
   const user = await analystOrNull();
   if (!user) return unauthorized();
   try {
-    return Response.json({ items: await loadInbox() });
+    return Response.json({ items: await loadInbox(user) });
   } catch (err) {
     return errorResponse(err);
   }

@@ -9,6 +9,8 @@ import {
   lastMessage,
   listConsoleConversations,
   listMessages,
+  markRead,
+  unreadCounts,
   type Conversation,
 } from "./conversations";
 import { appDb } from "./db";
@@ -73,7 +75,7 @@ function preview(parts: MessagePart[]): string {
   return "";
 }
 
-async function toItem(conversation: Conversation): Promise<InboxItem> {
+async function toItem(conversation: Conversation, unread = 0): Promise<InboxItem> {
   const db = await appDb();
   const [employee, analyst, last] = await Promise.all([
     person(conversation.employeeId),
@@ -96,14 +98,29 @@ async function toItem(conversation: Conversation): Promise<InboxItem> {
         }
       : null,
     lastMessage: last && { role: last.role, text: preview(last.parts) },
+    unread,
     updatedAt: conversation.updatedAt,
   };
 }
 
-export async function loadInbox(): Promise<InboxItem[]> {
+/** Não lidas só contam onde o analista precisa agir: na fila ou atendendo ele mesmo. */
+function awaitsAnalyst(conversation: Conversation, analyst: SessionUser): boolean {
+  return (
+    conversation.status === "aguardando_analista" ||
+    (conversation.status === "com_analista" && conversation.assignedAnalystId === analyst.id)
+  );
+}
+
+export async function loadInbox(analyst: SessionUser): Promise<InboxItem[]> {
   const db = await appDb();
   const since = new Date(Date.now() - CLOSED_WINDOW_MS);
-  return Promise.all((await listConsoleConversations(db, since)).map(toItem));
+  const conversations = await listConsoleConversations(db, since);
+  const unread = await unreadCounts(
+    db,
+    analyst.id,
+    conversations.filter((c) => awaitsAnalyst(c, analyst)).map((c) => c.id),
+  );
+  return Promise.all(conversations.map((c) => toItem(c, unread.get(c.id) ?? 0)));
 }
 
 /** Chamados do funcionário para o painel da direita: abertos primeiro, mais recentes antes. */
@@ -129,6 +146,8 @@ export async function loadConsoleConversation(
 ): Promise<ConsoleDetail> {
   const db = await appDb();
   const conversation = await getConversation(db, id);
+  // Abrir (ou manter aberta, com a consulta periódica) é ler.
+  await markRead(db, id, analyst.id, new Date());
   const [item, messages, tickets] = await Promise.all([
     toItem(conversation),
     listMessages(db, id),

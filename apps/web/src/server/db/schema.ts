@@ -1,4 +1,4 @@
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import type {
   ConversationStatus,
   DecisionTrace,
@@ -56,3 +56,16 @@ export const conversationEvents = sqliteTable("conversation_events", {
   note: text("note"),
   createdAt: text("created_at").notNull(),
 });
+
+/** Até quando cada analista viu cada conversa, para o contador de não lidas do console. */
+export const conversationReads = sqliteTable(
+  "conversation_reads",
+  {
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
+    analystId: text("analyst_id").notNull(),
+    readAt: text("read_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.conversationId, t.analystId] })],
+);

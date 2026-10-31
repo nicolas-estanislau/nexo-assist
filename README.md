@@ -98,7 +98,7 @@ As regras do service desk ficam em `domain`, sem dependência de LLM, banco ou H
 - **Rascunho confirmado no servidor:** Confirmar, Editar e Cancelar mandam só o id do rascunho; os dados vêm do banco, não do navegador. A edição muda texto e categoria, mas a prioridade e o prazo continuam os das regras. Um compare-and-swap na mensagem garante que um duplo clique não cria dois chamados.
 - **Com um analista, o agent se cala:** as mensagens do funcionário só ficam registradas, e a tela consulta o servidor a cada 3 s para mostrar as respostas do analista.
 - **Limite de 30 mensagens por conversa** (`MAX_MESSAGES_PER_SESSION`), checado no servidor. Ao chegar no limite, "Nova conversa" encerra a atual; os chamados continuam.
-- **Console do analista (`/console`):** lista de conversas com busca e filtros (Todas, Para você = fila do nível do analista, Com o agent, Minhas), a conversa no centro e os chamados do funcionário à direita. Na conversa transferida aparece o motivo, o resumo do agent e a confiança. O analista assume (o agent pausa e o chamado em foco vai para "Em atendimento"), responde, devolve ao agent ou encerra; cada ação vira um evento na conversa, visível para os dois lados. Só quem assumiu responde, devolve ou encerra.
+- **Console do analista (`/console`):** lista de conversas com busca e filtros (Todas, Para você = fila do nível do analista, Com o agent, Minhas), a conversa no centro e os chamados do funcionário à direita. Cada conversa da fila ou do próprio analista mostra quantas mensagens do funcionário ele ainda não viu (a leitura é registrada por analista). Na conversa transferida aparece o motivo, o resumo do agent e a confiança; o painel de chamados mostra os abertos e os encerrados mais recentes, com "Ver todos" para o resto. O analista assume (o agent pausa e o chamado em foco vai para "Em atendimento"), responde, devolve ao agent ou encerra; cada ação vira um evento na conversa, visível para os dois lados. Só quem assumiu responde, devolve ou encerra.
 
 ## Como o agent decide
 
@@ -198,7 +198,7 @@ O modelo é configurável por `LLM_MODEL` no formato do Mastra (`provedor/modelo
 ## O que faria com mais tempo
 
 - **Avaliações no CI**, com um orçamento de custo por execução, e mais cenários vindos de conversas reais (anonimizadas), principalmente as transferidas por baixa confiança.
-- **Server-Sent Events** no console e no chat com analista, no lugar da consulta a cada 3 s, e contador de não lidas na lista do console.
+- **Server-Sent Events** no console e no chat com analista, no lugar da consulta a cada 3 s.
 - **Busca semântica** na central de ajuda e sugestão de artigo para o analista no console.
 - **Métricas de operação:** taxa de resolução pelo agent, transferências por motivo, tempo até o analista assumir, custo por conversa, tudo a partir do trace que já é gravado.
 - **Postgres e fila de eventos** entre o app e o sistema de chamados, para não depender de o legado estar no ar no momento da ação.

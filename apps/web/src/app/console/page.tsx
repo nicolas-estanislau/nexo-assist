@@ -15,7 +15,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
     supportLevel: user.supportLevel,
   };
 
-  const items = await loadInbox();
+  const items = await loadInbox(user);
   const { c } = await searchParams;
   const wanted = typeof c === "string" ? c : null;
   const first =

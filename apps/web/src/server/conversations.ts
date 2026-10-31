@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, gt, gte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, ne, or, sql } from "drizzle-orm";
 import { transition, type ConversationEvent } from "@nexo/domain";
 import type { DecisionTrace, MessagePart, MessageRole } from "@nexo/shared";
 import type { AppDb } from "./db/client";
-import { conversationEvents, conversations, messages } from "./db/schema";
+import { conversationEvents, conversationReads, conversations, messages } from "./db/schema";
 
 // Repositório das conversas. Sem "server-only" para poder ser testado direto com Vitest;
 // quem chama (páginas, ações, rotas) já garante a sessão.
@@ -95,6 +95,57 @@ export async function countAgentTurns(
       ),
     );
   return row?.count ?? 0;
+}
+
+/** Registra que o analista viu a conversa até agora. */
+export async function markRead(
+  db: AppDb,
+  conversationId: string,
+  analystId: string,
+  now: Date,
+): Promise<void> {
+  const readAt = now.toISOString();
+  await db
+    .insert(conversationReads)
+    .values({ conversationId, analystId, readAt })
+    .onConflictDoUpdate({
+      target: [conversationReads.conversationId, conversationReads.analystId],
+      set: { readAt },
+    });
+}
+
+/**
+ * Mensagens do funcionário que o analista ainda não viu, por conversa. Conversa que ele nunca
+ * abriu conta todas.
+ */
+export async function unreadCounts(
+  db: AppDb,
+  analystId: string,
+  conversationIds: string[],
+): Promise<Map<string, number>> {
+  if (conversationIds.length === 0) return new Map();
+  const rows = await db
+    .select({ conversationId: messages.conversationId, count: sql<number>`count(*)` })
+    .from(messages)
+    .leftJoin(
+      conversationReads,
+      and(
+        eq(conversationReads.conversationId, messages.conversationId),
+        eq(conversationReads.analystId, analystId),
+      ),
+    )
+    .where(
+      and(
+        inArray(messages.conversationId, conversationIds),
+        eq(messages.role, "funcionario"),
+        or(
+          sql`${conversationReads.readAt} is null`,
+          gt(messages.createdAt, conversationReads.readAt),
+        ),
+      ),
+    )
+    .groupBy(messages.conversationId);
+  return new Map(rows.map((r) => [r.conversationId, r.count]));
 }
 
 export async function startConversation(
