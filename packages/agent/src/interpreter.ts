@@ -17,11 +17,9 @@ export interface Interpreter {
   interpret(prompt: string): Promise<Interpretation>;
 }
 
-export interface GeminiOptions {
-  /** Formato do Mastra: "google/gemini-3.5-flash". */
+export interface ModelOptions {
+  /** Formato do Mastra (provedor/modelo): "anthropic/claude-haiku-5-5", "google/gemini-3.5-flash". */
   model: string;
-  /** Raciocínio do Gemini. "minimal" mantém a resposta em ~2 s. */
-  thinkingLevel?: "minimal" | "low" | "medium" | "high";
   /**
    * Limite de cada tentativa. A resposta normal leva ~2 s, mas de vez em quando o modelo
    * passa de 30 s; cortar cedo e tentar de novo sai bem mais rápido do que esperar.
@@ -39,7 +37,25 @@ function usageOf(result: { usage?: Usage; totalUsage?: Usage }): Interpretation[
   return inputTokens + outputTokens > 0 ? { inputTokens, outputTokens } : null;
 }
 
-export function createMastraInterpreter(options: GeminiOptions): Interpreter {
+/**
+ * Ajustes por provedor. A tarefa é curta (classificar e preencher um JSON), então o raciocínio
+ * estendido fica desligado: sai mais rápido e mais barato sem perder qualidade.
+ */
+function settingsFor(model: string) {
+  if (model.startsWith("anthropic/")) {
+    // Modelos Claude atuais rejeitam temperature fora do padrão.
+    return { providerOptions: { anthropic: { thinking: { type: "disabled" as const } } } };
+  }
+  if (model.startsWith("google/")) {
+    return {
+      modelSettings: { temperature: 0.2 },
+      providerOptions: { google: { thinkingConfig: { thinkingLevel: "minimal" as const } } },
+    };
+  }
+  return {};
+}
+
+export function createMastraInterpreter(options: ModelOptions): Interpreter {
   const agent = new Agent({
     id: "nexo-assist",
     name: "Nexo Assist",
@@ -47,6 +63,7 @@ export function createMastraInterpreter(options: GeminiOptions): Interpreter {
     model: options.model,
   });
   const maxAttempts = options.attempts ?? 2;
+  const settings = settingsFor(options.model);
 
   return {
     async interpret(prompt) {
@@ -55,10 +72,7 @@ export function createMastraInterpreter(options: GeminiOptions): Interpreter {
         try {
           const result = await agent.generate(prompt, {
             structuredOutput: { schema: TurnDecision },
-            modelSettings: { temperature: 0.2 },
-            providerOptions: {
-              google: { thinkingConfig: { thinkingLevel: options.thinkingLevel ?? "minimal" } },
-            },
+            ...settings,
             abortSignal: AbortSignal.timeout(options.attemptTimeoutMs ?? 9_000),
           });
           // Quando a saída estruturada falha, o Mastra pode devolver `object` vazio em vez de lançar.

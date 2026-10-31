@@ -17,6 +17,8 @@ cp .env.example .env   # preencha as variáveis
 pnpm check             # typecheck, lint, formatação e testes
 ```
 
+O agent usa o Claude Haiku 5.5 (`LLM_MODEL=anthropic/claude-haiku-5-5`) e precisa de uma `ANTHROPIC_API_KEY`, criada em [platform.claude.com](https://platform.claude.com). O modelo é configurável: qualquer modelo no formato do Mastra (`provedor/modelo`) funciona, por exemplo `google/gemini-3.5-flash` com `GOOGLE_GENERATIVE_AI_API_KEY`.
+
 ```bash
 pnpm dev                                  # app em http://localhost:3000 e chamados em :4000
 pnpm --filter @nexo/tickets-api db:reset  # recria o banco de chamados com os dados de exemplo

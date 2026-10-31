@@ -3,7 +3,7 @@ export type { Employee } from "./context";
 export { TurnDecision, type DraftFacts } from "./decision";
 export {
   createMastraInterpreter,
-  type GeminiOptions,
+  type ModelOptions,
   type Interpretation,
   type Interpreter,
 } from "./interpreter";

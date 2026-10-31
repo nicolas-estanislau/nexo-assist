@@ -26,7 +26,7 @@ await seedIfEmpty(db, new Date());
 const app = createApp({ db, token, chaos: null, now: () => new Date() });
 
 const interpreter = createMastraInterpreter({
-  model: process.env["LLM_MODEL"] ?? "google/gemini-3.5-flash",
+  model: process.env["LLM_MODEL"] ?? "anthropic/claude-haiku-5-5",
 });
 const employee = { id: "ana.souza", name: "Ana Souza", department: "Financeiro" };
 const history: HistoryMessage[] = [];
