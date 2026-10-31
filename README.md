@@ -2,11 +2,14 @@
 
 Agent de atendimento do service desk de TI da Nexo. O funcionário descreve o problema num chat, e o agent consulta os chamados dele, busca na central de ajuda, propõe abrir, complementar ou reabrir um chamado e chama um analista quando precisa. O analista acompanha tudo num console, assume a conversa e devolve ao agent quando terminar.
 
+**No ar:** https://nexo-assist-web.fly.dev (usuários de exemplo abaixo, qualquer senha).
+
 Cada resposta do agent mostra o que ele fez ("✓ consultou seus chamados", "✓ verificou duplicidade") e, em "por quê?", o que entendeu, as regras aplicadas, a confiança e a justificativa.
 
 - [Como rodar](#como-rodar)
 - [Arquitetura](#arquitetura)
 - [Como o agent decide](#como-o-agent-decide)
+- [Deploy](#deploy)
 - [Qualidade das decisões](#qualidade-das-decisões)
 - [Modelo e custo](#modelo-e-custo)
 - [Decisões e trade-offs](#decisões-e-trade-offs)
@@ -120,6 +123,39 @@ O princípio é **o LLM interpreta, o código decide**. O modelo é bom para ent
 | Responder pela central de ajuda | LLM, a partir dos artigos encontrados; o artigo usado fica no trace                                                                                                                                                       |
 | Sistema de chamados fora do ar  | Código: nenhuma ação sobre chamados sem consultar antes; o funcionário recebe "tentar de novo"                                                                                                                            |
 | Falha do modelo                 | Código: avisa e não age (não transfere sozinho, para não lotar a fila por instabilidade)                                                                                                                                  |
+
+## Deploy
+
+Publicado no [Fly.io](https://fly.io), região São Paulo, como dois apps feitos a partir do mesmo `Dockerfile` (um alvo para cada serviço):
+
+| App                   | Configuração       | Acesso                                                                                                  |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `nexo-assist-web`     | `fly.web.toml`     | Público, em https://nexo-assist-web.fly.dev. Dorme sem acesso e acorda na primeira requisição           |
+| `nexo-assist-tickets` | `fly.tickets.toml` | Sem endereço público: só o app web o alcança, pela rede privada do Fly (`nexo-assist-tickets.internal`) |
+
+Cada app tem um volume em `/data` para o seu SQLite. O serviço de chamados cria os dados de exemplo na primeira subida.
+
+**Chaves protegidas:** `ANTHROPIC_API_KEY`, `SESSION_SECRET` e `TICKETS_API_TOKEN` ficam como segredos do Fly, nunca no código nem na imagem (`.dockerignore` exclui o `.env`). O script `scripts/fly-secrets.sh` gera o token e a chave de sessão aleatórios, lê a chave do Claude do `.env` local e envia tudo sem mostrar os valores.
+
+**Limite de uso contra abuso e custo:**
+
+- no máximo 60 respostas do agent por funcionário em 24 h (`USER_DAILY_TURN_LIMIT`);
+- no máximo 1000 respostas no total em 24 h (`DAILY_TURN_LIMIT`), o que limita o gasto com o modelo a cerca de US$ 0,60 por dia no pior caso;
+- 30 mensagens por conversa;
+- e, como proteção extra fora do app, um limite de gasto mensal no console da Anthropic (recomendado).
+
+Ao chegar a um limite, o chat avisa e não chama o modelo.
+
+Para publicar de novo:
+
+```bash
+fly deploy -c fly.tickets.toml --remote-only --ha=false
+fly deploy -c fly.web.toml --remote-only --ha=false
+```
+
+O primeiro deploy, do zero: `fly apps create` para os dois apps, `fly volumes create tickets_data` e `fly volumes create web_data` (região `gru`, 1 GB), `bash scripts/fly-secrets.sh` e os dois `fly deploy` acima.
+
+Como as datas do exemplo são relativas ao momento do seed, com o passar dos dias o INC-20150 deixa de poder ser reaberto. Para reiniciar os dados, apague e recrie o volume `tickets_data`.
 
 ## Qualidade das decisões
 

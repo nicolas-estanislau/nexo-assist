@@ -2,11 +2,15 @@
 # Configura os segredos dos dois apps no Fly, sem mostrar nenhum valor na tela.
 # - TICKETS_API_TOKEN e SESSION_SECRET: gerados aqui, aleatórios.
 # - ANTHROPIC_API_KEY: lida do .env local.
-# Uso (na raiz do repositório): bash scripts/fly-secrets.sh
+# Uso: bash scripts/fly-secrets.sh
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
 WEB_APP="${WEB_APP:-nexo-assist-web}"
 TICKETS_APP="${TICKETS_APP:-nexo-assist-tickets}"
+
+# O instalador do Windows só põe o flyctl no PATH de terminais novos.
+FLY="$(command -v fly || echo "$HOME/.fly/bin/flyctl")"
 
 random() { node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"; }
 
@@ -17,8 +21,8 @@ if [ -z "$ANTHROPIC_API_KEY" ]; then
 fi
 
 TOKEN="$(random)"
-fly secrets set --stage -a "$TICKETS_APP" "TICKETS_API_TOKEN=$TOKEN" >/dev/null
-fly secrets set --stage -a "$WEB_APP" \
+"$FLY" secrets set --stage -a "$TICKETS_APP" "TICKETS_API_TOKEN=$TOKEN" >/dev/null
+"$FLY" secrets set --stage -a "$WEB_APP" \
   "TICKETS_API_TOKEN=$TOKEN" \
   "SESSION_SECRET=$(random)" \
   "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" >/dev/null
