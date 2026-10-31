@@ -36,6 +36,7 @@ Na primeira subida o banco SQLite é criado em `apps/tickets-api/data/` com func
 | `apps/web`                | App Next.js: login, chat do funcionário, console do analista e banco das conversas |
 | `packages/sqlite`         | Abertura do SQLite (libsql) com migrações versionadas, usada pelos dois bancos     |
 | `packages/tickets-client` | Cliente tipado do sistema de chamados, com timeout, retry e chave de idempotência  |
+| `packages/evals`          | Cenários de conversa rodados contra o LLM de verdade, com relatório                |
 
 ### Serviço de chamados simulado
 
@@ -56,6 +57,23 @@ Na primeira subida o banco SQLite é criado em `apps/tickets-api/data/` com func
 - **Console do analista (`/console`):** lista de conversas com busca e filtros (Todas, Para você = fila do nível do analista, Com o agent, Minhas), a conversa no centro e os chamados do funcionário à direita. Na conversa transferida aparece o motivo, o resumo do agent e a confiança. O analista assume (o agent pausa e o chamado em foco vai para "Em atendimento"), responde, devolve ao agent ou encerra; cada ação vira um evento na conversa, visível para os dois lados. Só quem assumiu responde, devolve ou encerra.
 - **Atualização por consulta, não por socket:** console e chat do funcionário consultam o servidor a cada 3 s enquanto há um humano na conversa. É simples, funciona em qualquer hospedagem e basta para o volume de um service desk; com mais tempo, trocaria por Server-Sent Events.
 - **Cache Components desligado:** quase toda tela depende do usuário logado (chat, chamados, console), então o cache de páginas estáticas do Next 16 traria complexidade sem ganho.
+
+## Qualidade das decisões
+
+Duas camadas, cada uma para um tipo de erro:
+
+- **Testes (`pnpm test`):** as regras do Anexo A (prioridade, prazo em horas úteis, duplicidade, reabertura, transferência), a política do agent com um modelo fixo no lugar do LLM, o cliente com quedas e retry, e a máquina de estados da conversa. Rodam sem rede e sem chave.
+- **Avaliações (`pnpm evals`):** 17 cenários rodados contra o modelo de verdade, cada um com um funcionário do seed e o resultado esperado: dúvida resolvida pela central, Windows 10 x Windows 11, chamado duplicado, reabertura em até 7 dias e recusa depois disso, fora de escopo, chamado de outra pessoa (pelo número e pelo nome), tentativa de contornar as regras, chamado vencido, pedido de analista, as quatro prioridades, requisição x incidente, mensagem vaga e saudação.
+
+As avaliações conferem o que o funcionário recebe e o que foi feito (rascunho, alvo, prioridade, transferência, regras registradas no trace), não o texto livre do modelo. Em todo turno também conferem que nada dos chamados de outras pessoas aparece na resposta. Cada execução tem o próprio banco de chamados temporário.
+
+```bash
+pnpm evals                       # todos os cenários, uma vez
+pnpm evals --runs 3              # três vezes cada, para medir estabilidade
+pnpm evals --only vencido,ambiguo
+```
+
+O último resultado fica em [packages/evals/RESULTADOS.md](packages/evals/RESULTADOS.md). A primeira rodada achou dois problemas reais, já corrigidos: perguntar pelo chamado de um colega deixava o modelo inseguro e o agent transferia para um analista em vez de responder pela regra de privacidade; e um problema que voltou fazia o agent perguntar "quem é afetado?" antes de ver que dava para reabrir o chamado resolvido.
 
 ### Usuários de exemplo
 

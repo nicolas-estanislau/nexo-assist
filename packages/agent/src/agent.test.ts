@@ -189,6 +189,36 @@ describe("runTurn", () => {
     expect(trace.rulesApplied.join(" ")).toContain("Privacidade");
   });
 
+  it("chamado de outro com confiança baixa: responde pela privacidade, sem transferir", async () => {
+    const { tickets } = await setup();
+    const { transfer, trace } = await turn(
+      tickets,
+      decision({ action: "mostrar_chamado", ticketId: "INC-20402", confidence: 0.3 }),
+    );
+    expect(transfer).toBeNull();
+    expect(trace.rulesApplied.join(" ")).toContain("Privacidade");
+  });
+
+  it("problema que voltou: oferece reabrir antes de perguntar quem é afetado", async () => {
+    const { tickets } = await setup();
+    const { parts } = await turn(
+      tickets,
+      decision({
+        action: "propor_chamado",
+        draft: {
+          type: "INC",
+          category: "Acesso",
+          title: "Senha do SAP bloqueada",
+          description: "A senha do SAP bloqueou de novo.",
+          affected: null,
+          workBlocked: true,
+          sameDayCommitment: false,
+        },
+      }),
+    );
+    expect(draftOf(parts)).toMatchObject({ action: "reopen", targetTicketId: "INC-20150" });
+  });
+
   it("chamado vencido: mostra o card e oferece um analista", async () => {
     const { tickets } = await setup();
     const { parts, transfer } = await turn(

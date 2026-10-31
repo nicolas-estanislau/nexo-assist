@@ -150,6 +150,22 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/evals:
+    dependencies:
+      '@nexo/agent':
+        specifier: workspace:*
+        version: link:../agent
+      '@nexo/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@nexo/tickets-api':
+        specifier: workspace:*
+        version: link:../../apps/tickets-api
+    devDependencies:
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+
   packages/shared:
     dependencies:
       zod:

@@ -127,9 +127,17 @@ export function applyPolicy(
     };
   }
 
-  // 2. Transferência: pedido do funcionário, caso crítico ou baixa confiança (Anexo A).
   const focus = decision.ticketId ? known.get(decision.ticketId) : undefined;
   const userRequested = decision.userAskedForHuman || decision.action === "transferir";
+
+  // 2. Chamado que não está entre os do funcionário: a resposta é a da privacidade, mesmo com
+  // confiança baixa. Não há dúvida para um analista resolver, e transferir pareceria uma brecha.
+  const asksAboutTicket = ["mostrar_chamado", "propor_complemento"].includes(decision.action);
+  if (asksAboutTicket && decision.ticketId && !focus && !userRequested) {
+    return ticketNotFound(decision.ticketId, openViews, trace);
+  }
+
+  // 3. Transferência: pedido do funcionário, caso crítico ou baixa confiança (Anexo A).
   const transfer = decideTransfer({
     userRequested,
     priority: focus?.ticket.priority ?? null,
@@ -161,7 +169,7 @@ export function applyPolicy(
     };
   }
 
-  // 3. A ação sugerida, com as regras aplicadas.
+  // 4. A ação sugerida, com as regras aplicadas.
   switch (decision.action) {
     case "responder":
     case "transferir":
@@ -340,8 +348,7 @@ function proposeTicket(
   const facts = decision.draft;
   const { now, employee } = context;
 
-  // Abertura exige saber quem é afetado: sem isso não há como definir a prioridade.
-  if (!facts || facts.affected === null) {
+  const askAffected = (): PolicyOutcome => {
     trace.rule("Falta informação para abrir o chamado: quem é afetado.");
     return {
       parts: [
@@ -350,9 +357,11 @@ function proposeTicket(
       ],
       transfer: null,
     };
-  }
+  };
+  if (!facts) return askAffected();
 
-  // Duplicidade: atualizar ou reabrir em vez de criar outro.
+  // Duplicidade primeiro: atualizar ou reabrir em vez de criar outro. Para isso não importa
+  // quem é afetado, então a pergunta só vem se for mesmo um chamado novo.
   const duplicate = findDuplicate(
     {
       title: facts.title,
@@ -390,6 +399,9 @@ function proposeTicket(
       };
     }
   }
+
+  // Abertura exige saber quem é afetado: sem isso não há como definir a prioridade.
+  if (facts.affected === null) return askAffected();
 
   // Prioridade e prazo pelas regras do Anexo A.
   const { priority, reason } = classifyPriority({

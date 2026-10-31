@@ -4,15 +4,15 @@ Plano de implementação do desafio técnico (PRD v5). Referências: `Desafio_Te
 
 ## Stack
 
-| Camada    | Escolha                                              | Por quê                                              |
-| --------- | ---------------------------------------------------- | ---------------------------------------------------- |
-| Monorepo  | pnpm workspaces                                      | Separação visível entre interface, agente e serviço  |
-| Interface | Next.js (App Router) + Tailwind                      | Sugestão do PRD; o Pencil exporta HTML + Tailwind    |
-| Agente    | Mastra                                               | Preferência declarada no PRD                         |
-| LLM       | Google Gemini, modelo rápido e barato (versão Flash) | Custo por conversa e tempo de resposta são avaliados |
-| Banco     | SQLite + Drizzle ORM                                 | Persiste entre reinícios, zero configuração          |
-| Validação | Zod                                                  | Saídas do LLM, inputs das tools e API                |
-| Testes    | Vitest + suíte de cenários do agente                 | Mostra como a qualidade das decisões foi garantida   |
+| Camada    | Escolha                                         | Por quê                                              |
+| --------- | ----------------------------------------------- | ---------------------------------------------------- |
+| Monorepo  | pnpm workspaces                                 | Separação visível entre interface, agente e serviço  |
+| Interface | Next.js (App Router) + Tailwind                 | Sugestão do PRD; o Pencil exporta HTML + Tailwind    |
+| Agente    | Mastra                                          | Preferência declarada no PRD                         |
+| LLM       | Claude Haiku 5.5 (configurável via `LLM_MODEL`) | Custo por conversa e tempo de resposta são avaliados |
+| Banco     | SQLite + Drizzle ORM                            | Persiste entre reinícios, zero configuração          |
+| Validação | Zod                                             | Saídas do LLM, inputs das tools e API                |
+| Testes    | Vitest + suíte de cenários do agente            | Mostra como a qualidade das decisões foi garantida   |
 
 ## Estrutura
 
@@ -24,8 +24,8 @@ nexo-assist/
 ├─ packages/
 │  ├─ agent/          → Mastra: agente, tools, prompts, trace de decisão
 │  ├─ domain/         → regras puras: prioridade, SLA, dedup, escopo
-│  └─ shared/         → tipos e schemas Zod compartilhados
-└─ evals/             → cenários de conversa com o resultado esperado
+│  ├─ shared/         → tipos e schemas Zod compartilhados
+│  └─ evals/          → cenários de conversa com o resultado esperado
 ```
 
 O `tickets-api` roda em porta separada e simula o sistema legado, com injeção de falhas configurável (indisponibilidade de alguns segundos e latência). O cliente usado pelo agente faz retry com backoff e timeout.

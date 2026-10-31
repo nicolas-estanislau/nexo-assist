@@ -4,3 +4,4 @@ dist
 .next
 coverage
 *.pdf
+packages/evals/RESULTADOS.md
