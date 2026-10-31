@@ -7,6 +7,7 @@ import { agentInterpreter, ticketsConnection } from "./agent";
 import {
   appendMessage,
   applyTransition,
+  countAgentTurns,
   findActiveConversation,
   findLatestConversation,
   listMessages,
@@ -151,6 +152,30 @@ async function applyTransfer(
   emit({ type: "message", message: notice });
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Teto de uso do agent nas últimas 24 h, por funcionário e no total. Protege o custo do LLM
+ * contra abuso; o analista continua respondendo normalmente.
+ */
+async function assertWithinDailyLimit(user: SessionUser) {
+  const db = await appDb();
+  const since = new Date(Date.now() - DAY_MS);
+  const { USER_DAILY_TURN_LIMIT, DAILY_TURN_LIMIT } = env();
+  if ((await countAgentTurns(db, since, user.id)) >= USER_DAILY_TURN_LIMIT) {
+    throw new ChatError(
+      `Você chegou ao limite de ${USER_DAILY_TURN_LIMIT} respostas do assistente nas últimas 24 horas. Tente de novo mais tarde.`,
+      "LIMIT",
+    );
+  }
+  if ((await countAgentTurns(db, since)) >= DAILY_TURN_LIMIT) {
+    throw new ChatError(
+      "O assistente atingiu o limite de uso de hoje. Tente de novo mais tarde.",
+      "LIMIT",
+    );
+  }
+}
+
 export async function sendMessage(user: SessionUser, text: string, emit: Emit): Promise<void> {
   const db = await appDb();
   const conversation =
@@ -166,6 +191,8 @@ export async function sendMessage(user: SessionUser, text: string, emit: Emit): 
       "LIMIT",
     );
   }
+
+  if (agentCanRespond(conversation.status)) await assertWithinDailyLimit(user);
 
   const history = await listMessages(db, conversation.id);
   const userMessage = await appendMessage(

@@ -2,9 +2,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { DecisionTrace } from "@nexo/shared";
 import { openAppDb, type AppDb } from "./db/client";
 import {
   appendMessage,
+  countAgentTurns,
   applyTransition,
   ConversationError,
   findActiveConversation,
@@ -242,5 +244,36 @@ describe("console", () => {
     expect(closed.closedBy).toBe("rafael.lima");
     expect((await findLatestConversation(db, "ana.souza"))?.id).toBe(c.id);
     expect(await findActiveConversation(db, "ana.souza")).toBeNull();
+  });
+});
+
+describe("limite de uso", () => {
+  const trace: DecisionTrace = {
+    understood: { intent: "duvida", summary: "", entities: {} },
+    actions: [],
+    rulesApplied: [],
+    confidence: 0.9,
+    rationale: "",
+    model: "teste",
+    usage: null,
+    latencyMs: 1,
+  };
+  const reply = (conversationId: string, at: Date) =>
+    appendMessage(
+      db,
+      conversationId,
+      { role: "agent", authorId: null, parts: [{ type: "text", text: "ok" }], trace },
+      at,
+    );
+
+  it("conta só respostas do agent com trace, por funcionário e no total", async () => {
+    const ana = await startConversation(db, "ana.souza", NOW); // a saudação não conta
+    const bruno = await startConversation(db, "bruno.tavares", NOW);
+    await reply(ana.id, later(1));
+    await reply(ana.id, later(2));
+    await reply(bruno.id, later(3));
+    expect(await countAgentTurns(db, NOW)).toBe(3);
+    expect(await countAgentTurns(db, NOW, "ana.souza")).toBe(2);
+    expect(await countAgentTurns(db, later(2), "ana.souza")).toBe(1);
   });
 });

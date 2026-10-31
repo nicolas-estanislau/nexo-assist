@@ -6,6 +6,9 @@ const EnvSchema = z.object({
   TICKETS_API_TOKEN: z.string().min(16),
   APP_DATABASE_URL: z.string().default("file:./data/app.db"),
   MAX_MESSAGES_PER_SESSION: z.coerce.number().int().positive().default(30),
+  /** Respostas do agent por funcionário em 24 h, e no total: teto de custo do LLM. */
+  USER_DAILY_TURN_LIMIT: z.coerce.number().int().positive().default(60),
+  DAILY_TURN_LIMIT: z.coerce.number().int().positive().default(1000),
   LLM_MODEL: z.string().min(1).default("anthropic/claude-haiku-5-5"),
 });
 

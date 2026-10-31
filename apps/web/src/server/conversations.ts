@@ -73,6 +73,30 @@ export async function lastMessage(db: AppDb, conversationId: string): Promise<Me
   return row ?? null;
 }
 
+/**
+ * Respostas do agent (cada uma é uma chamada ao LLM) desde `since`, de todos ou de um
+ * funcionário. Base do limite de uso diário.
+ */
+export async function countAgentTurns(
+  db: AppDb,
+  since: Date,
+  employeeId?: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(messages)
+    .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+    .where(
+      and(
+        eq(messages.role, "agent"),
+        sql`${messages.trace} is not null`,
+        gte(messages.createdAt, since.toISOString()),
+        employeeId ? eq(conversations.employeeId, employeeId) : undefined,
+      ),
+    );
+  return row?.count ?? 0;
+}
+
 export async function startConversation(
   db: AppDb,
   employeeId: string,
