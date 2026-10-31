@@ -61,8 +61,14 @@ export function createMastraInterpreter(options: GeminiOptions): Interpreter {
             },
             abortSignal: AbortSignal.timeout(options.attemptTimeoutMs ?? 9_000),
           });
+          // Quando a saída estruturada falha, o Mastra pode devolver `object` vazio em vez de lançar.
+          const parsed = TurnDecision.safeParse(result.object);
+          if (!parsed.success) {
+            lastError = new Error("O modelo respondeu fora do formato esperado.");
+            continue;
+          }
           return {
-            decision: result.object,
+            decision: parsed.data,
             model: options.model,
             usage: usageOf(result as { usage?: Usage; totalUsage?: Usage }),
             attempts: attempt,
