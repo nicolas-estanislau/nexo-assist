@@ -1,5 +1,7 @@
-# Serviço de chamados ("legado" simulado). Sem http_service: não tem endereço público e só
-# é alcançado pelo app web, na rede privada do Fly (<app>.internal).
+# Serviço de chamados ("legado" simulado). Só tem IP privado (Flycast): não tem endereço
+# público e só é alcançado pelo app web, em http://<app>.flycast. Fica sempre ligado, como
+# um sistema legado: acordar leva ~15 s, mais do que o login espera. Se a máquina parar
+# mesmo assim, o proxy do Fly a religa na próxima chamada.
 app = "nexo-assist-tickets"
 primary_region = "gru"
 
@@ -17,6 +19,13 @@ primary_region = "gru"
 [mounts]
   source = "tickets_data"
   destination = "/data"
+
+[http_service]
+  internal_port = 4000
+  force_https = false
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
 
 [[vm]]
   size = "shared-cpu-1x"

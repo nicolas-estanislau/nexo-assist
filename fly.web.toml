@@ -8,7 +8,7 @@ primary_region = "gru"
 
 [env]
   APP_DATABASE_URL = "file:/data/app.db"
-  TICKETS_API_URL = "http://nexo-assist-tickets.internal:4000"
+  TICKETS_API_URL = "http://nexo-assist-tickets.flycast"
   LLM_MODEL = "anthropic/claude-haiku-5-5"
   MAX_MESSAGES_PER_SESSION = "30"
   USER_DAILY_TURN_LIMIT = "60"

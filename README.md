@@ -128,10 +128,10 @@ O princípio é **o LLM interpreta, o código decide**. O modelo é bom para ent
 
 Publicado no [Fly.io](https://fly.io), região São Paulo, como dois apps feitos a partir do mesmo `Dockerfile` (um alvo para cada serviço):
 
-| App                   | Configuração       | Acesso                                                                                                  |
-| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `nexo-assist-web`     | `fly.web.toml`     | Público, em https://nexo-assist-web.fly.dev. Dorme sem acesso e acorda na primeira requisição           |
-| `nexo-assist-tickets` | `fly.tickets.toml` | Sem endereço público: só o app web o alcança, pela rede privada do Fly (`nexo-assist-tickets.internal`) |
+| App                   | Configuração       | Acesso                                                                                                                   |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `nexo-assist-web`     | `fly.web.toml`     | Público, em https://nexo-assist-web.fly.dev. Dorme sem acesso e acorda na primeira requisição                            |
+| `nexo-assist-tickets` | `fly.tickets.toml` | Sem endereço público: só o app web o alcança, pelo IP privado do Fly (`nexo-assist-tickets.flycast`). Fica sempre ligado |
 
 Cada app tem um volume em `/data` para o seu SQLite. O serviço de chamados cria os dados de exemplo na primeira subida.
 
@@ -153,7 +153,7 @@ fly deploy -c fly.tickets.toml --remote-only --ha=false
 fly deploy -c fly.web.toml --remote-only --ha=false
 ```
 
-O primeiro deploy, do zero: `fly apps create` para os dois apps, `fly volumes create tickets_data` e `fly volumes create web_data` (região `gru`, 1 GB), `bash scripts/fly-secrets.sh` e os dois `fly deploy` acima.
+O primeiro deploy, do zero: `fly apps create` para os dois apps, `fly ips allocate-v6 --private -a nexo-assist-tickets` (IP só privado), `fly volumes create tickets_data` e `fly volumes create web_data` (região `gru`, 1 GB), `bash scripts/fly-secrets.sh` e os dois `fly deploy` acima.
 
 Como as datas do exemplo são relativas ao momento do seed, com o passar dos dias o INC-20150 deixa de poder ser reaberto. Para reiniciar os dados, apague e recrie o volume `tickets_data`.
 
