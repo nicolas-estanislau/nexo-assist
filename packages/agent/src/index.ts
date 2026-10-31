@@ -1,5 +1,5 @@
 export { confirmDraft, type ConfirmDraftInput, type ConfirmDraftResult } from "./confirm";
-export type { Employee } from "./context";
+export { toView, type Employee } from "./context";
 export { TurnDecision, type DraftFacts } from "./decision";
 export {
   createMastraInterpreter,

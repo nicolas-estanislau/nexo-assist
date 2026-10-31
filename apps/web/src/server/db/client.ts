@@ -42,6 +42,12 @@ const MIGRATIONS: Migrations = [
       created_at TEXT NOT NULL
     )`,
   ],
+  [
+    // Etapa 6: o console mostra para qual nível foi, desde quando espera e quem encerrou.
+    `ALTER TABLE conversations ADD COLUMN handoff_level TEXT`,
+    `ALTER TABLE conversations ADD COLUMN handoff_at TEXT`,
+    `ALTER TABLE conversations ADD COLUMN closed_by TEXT`,
+  ],
 ];
 
 export function openAppDb(url: string) {

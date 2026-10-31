@@ -8,7 +8,10 @@ import {
   applyTransition,
   ConversationError,
   findActiveConversation,
+  findLatestConversation,
   getConversation,
+  lastMessage,
+  listConsoleConversations,
   listMessages,
   replaceMessageParts,
   startConversation,
@@ -182,5 +185,62 @@ describe("transferência para analista", () => {
     expect(ok).toHaveLength(1);
     expect(failed).toHaveLength(1);
     expect((failed[0] as PromiseRejectedResult).reason).toBeInstanceOf(ConversationError);
+  });
+});
+
+describe("console", () => {
+  const say = (conversationId: string, at: Date) =>
+    appendMessage(
+      db,
+      conversationId,
+      { role: "funcionario", authorId: "x", parts: [{ type: "text", text: "oi" }] },
+      at,
+    );
+
+  it("lista as conversas em andamento e as encerradas recentes, sem as vazias", async () => {
+    const active = await startConversation(db, "ana.souza", NOW);
+    await say(active.id, later(1));
+    await startConversation(db, "bruno.tavares", NOW); // só a saudação
+    const oldClosed = await startConversation(db, "carla.mendes", NOW);
+    await say(oldClosed.id, later(1));
+    await applyTransition(
+      db,
+      oldClosed.id,
+      { event: { type: "encerrar" }, actorId: "x" },
+      later(2),
+    );
+    const recentClosed = await startConversation(db, "diego.alves", NOW);
+    await say(recentClosed.id, later(1));
+    await applyTransition(
+      db,
+      recentClosed.id,
+      { event: { type: "encerrar" }, actorId: "x" },
+      later(30),
+    );
+
+    const ids = (await listConsoleConversations(db, later(10))).map((c) => c.id);
+    expect(ids.sort()).toEqual([active.id, recentClosed.id].sort());
+  });
+
+  it("registra quem encerrou e qual é a última conversa e mensagem", async () => {
+    const c = await startConversation(db, "ana.souza", NOW);
+    await say(c.id, later(1));
+    const last = await appendMessage(
+      db,
+      c.id,
+      { role: "agent", authorId: null, parts: [{ type: "text", text: "olá" }] },
+      later(1),
+    );
+    expect((await lastMessage(db, c.id))?.id).toBe(last.id);
+
+    const closed = await applyTransition(
+      db,
+      c.id,
+      { event: { type: "encerrar" }, actorId: "rafael.lima" },
+      later(5),
+    );
+    expect(closed.closedBy).toBe("rafael.lima");
+    expect((await findLatestConversation(db, "ana.souza"))?.id).toBe(c.id);
+    expect(await findActiveConversation(db, "ana.souza")).toBeNull();
   });
 });

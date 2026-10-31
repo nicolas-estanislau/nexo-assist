@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ne, or, sql } from "drizzle-orm";
 import { transition, type ConversationEvent } from "@nexo/domain";
 import type { DecisionTrace, MessagePart, MessageRole } from "@nexo/shared";
 import type { AppDb } from "./db/client";
@@ -32,6 +32,47 @@ export async function findActiveConversation(
   return row ?? null;
 }
 
+/** Última conversa do funcionário, encerrada ou não. */
+export async function findLatestConversation(
+  db: AppDb,
+  employeeId: string,
+): Promise<Conversation | null> {
+  const row = await db.query.conversations.findFirst({
+    where: eq(conversations.employeeId, employeeId),
+    orderBy: [desc(conversations.createdAt), desc(sql`rowid`)],
+  });
+  return row ?? null;
+}
+
+/**
+ * Conversas do console: as em andamento e as encerradas desde `closedSince`. Conversas sem
+ * nenhuma mensagem do funcionário (só a saudação) ficam de fora.
+ */
+export async function listConsoleConversations(
+  db: AppDb,
+  closedSince: Date,
+): Promise<Conversation[]> {
+  return db.query.conversations.findMany({
+    where: and(
+      gt(conversations.employeeMessageCount, 0),
+      or(
+        ne(conversations.status, "encerrada"),
+        gte(conversations.closedAt, closedSince.toISOString()),
+      ),
+    ),
+    orderBy: desc(conversations.updatedAt),
+    limit: 200,
+  });
+}
+
+export async function lastMessage(db: AppDb, conversationId: string): Promise<Message | null> {
+  const row = await db.query.messages.findFirst({
+    where: eq(messages.conversationId, conversationId),
+    orderBy: [desc(messages.createdAt), desc(sql`rowid`)],
+  });
+  return row ?? null;
+}
+
 export async function startConversation(
   db: AppDb,
   employeeId: string,
@@ -47,10 +88,13 @@ export async function startConversation(
     handoffSummary: null,
     handoffConfidence: null,
     handoffTicketId: null,
+    handoffLevel: null,
+    handoffAt: null,
     employeeMessageCount: 0,
     createdAt: at,
     updatedAt: at,
     closedAt: null,
+    closedBy: null,
   };
   await db.insert(conversations).values(conversation);
   return conversation;
@@ -139,6 +183,8 @@ export interface TransitionInput {
       | "handoffSummary"
       | "handoffConfidence"
       | "handoffTicketId"
+      | "handoffLevel"
+      | "handoffAt"
     >
   >;
 }
@@ -165,6 +211,7 @@ export async function applyTransition(
       status: result.status,
       updatedAt: at,
       closedAt: result.status === "encerrada" ? at : current.closedAt,
+      closedBy: result.status === "encerrada" ? input.actorId : current.closedBy,
     })
     .where(and(eq(conversations.id, conversationId), eq(conversations.status, current.status)))
     .returning();

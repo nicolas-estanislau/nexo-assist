@@ -1,5 +1,11 @@
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { ConversationStatus, DecisionTrace, MessagePart, MessageRole } from "@nexo/shared";
+import type {
+  ConversationStatus,
+  DecisionTrace,
+  MessagePart,
+  MessageRole,
+  SupportLevel,
+} from "@nexo/shared";
 
 // Banco do app: conversas e o que o agent decidiu em cada turno. Os chamados ficam no
 // tickets-api; aqui guardamos só referências a eles dentro das mensagens.
@@ -16,10 +22,14 @@ export const conversations = sqliteTable("conversations", {
   handoffConfidence: real("handoff_confidence"),
   /** Chamado em foco quando foi transferida, para o painel do console. */
   handoffTicketId: text("handoff_ticket_id"),
+  handoffLevel: text("handoff_level").$type<SupportLevel>(),
+  handoffAt: text("handoff_at"),
   employeeMessageCount: integer("employee_message_count").notNull(),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
   closedAt: text("closed_at"),
+  /** Quem encerrou: o próprio funcionário (nova conversa) ou um analista. */
+  closedBy: text("closed_by"),
 });
 
 export const messages = sqliteTable("messages", {

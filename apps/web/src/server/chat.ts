@@ -8,6 +8,7 @@ import {
   appendMessage,
   applyTransition,
   findActiveConversation,
+  findLatestConversation,
   listMessages,
   replaceMessageParts,
   startConversation,
@@ -35,7 +36,8 @@ export class ChatError extends Error {
 type Emit = (event: ChatEvent) => void;
 
 async function analystOf(conversation: Conversation): Promise<ChatConversation["analyst"]> {
-  if (conversation.status !== "com_analista" || !conversation.assignedAnalystId) return null;
+  const withAnalyst = conversation.status === "com_analista" || conversation.status === "encerrada";
+  if (!withAnalyst || !conversation.assignedAnalystId) return null;
   try {
     const analyst = await ticketsClient().getEmployee(conversation.assignedAnalystId);
     return { name: analyst.name, supportLevel: analyst.supportLevel };
@@ -57,9 +59,21 @@ async function toState(conversation: Conversation | null, messages: Message[]): 
   };
 }
 
+/**
+ * Conversa que o funcionário vê: a em andamento ou, se um analista acabou de encerrar a última,
+ * essa mesma (para ele ler o fechamento). Uma conversa que ele mesmo encerrou não volta.
+ */
+async function visibleConversation(user: SessionUser): Promise<Conversation | null> {
+  const db = await appDb();
+  const latest = await findLatestConversation(db, user.id);
+  if (!latest) return null;
+  if (latest.status !== "encerrada") return latest;
+  return latest.closedBy && latest.closedBy !== user.id ? latest : null;
+}
+
 export async function loadChat(user: SessionUser): Promise<ChatState> {
   const db = await appDb();
-  const conversation = await findActiveConversation(db, user.id);
+  const conversation = await visibleConversation(user);
   return toState(conversation, conversation ? await listMessages(db, conversation.id) : []);
 }
 
@@ -74,8 +88,11 @@ export async function startNewChat(user: SessionUser): Promise<ChatState> {
       { event: { type: "encerrar" }, actorId: user.id, note: "Nova conversa pelo funcionário." },
       new Date(),
     );
+  } else if (await visibleConversation(user)) {
+    // A última foi encerrada por um analista: uma conversa nova a tira da tela.
+    await startConversation(db, user.id, new Date());
   }
-  return toState(null, []);
+  return loadChat(user);
 }
 
 function employeeOf(user: SessionUser) {
@@ -110,6 +127,8 @@ async function applyTransfer(
         handoffSummary: transfer.summary,
         handoffConfidence: transfer.confidence,
         handoffTicketId: transfer.ticketId,
+        handoffLevel: transfer.level,
+        handoffAt: new Date().toISOString(),
       },
     },
     new Date(),
